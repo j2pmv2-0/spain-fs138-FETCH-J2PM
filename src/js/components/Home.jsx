@@ -9,33 +9,57 @@ const Home = () => {
 	const [tasks, setTasks] = useState([]);
 
 	useEffect(() => {
-		crearUsuario();
-		obtenerTareas();
+		const inicializarApp = async () => {
+			await inicializarUsuario();
+		};
+
+		inicializarApp();
 	}, []);
 
-	const crearUsuario = () => {
-		fetch(USER_URL, {
-			method: "POST",
-		})
-			.then((resp) => resp.text())
-			.then((data) => console.log(data))
-			.catch((error) => console.log(error));
-	};
-
-	const obtenerTareas = () => {
-		fetch(USER_URL)
-			.then((resp) => resp.text())
-			.then((data) => {
-				const datos = JSON.parse(data);
-				setTasks(datos.todos || []);
-			})
-			.catch((error) => {
-				console.log(error);
-				setTasks([]);
+	const crearUsuario = async () => {
+		try {
+			const resp = await fetch(USER_URL, {
+				method: "POST",
 			});
+			const data = await resp.text();
+			console.log(data);
+		} catch (error) {
+			console.log(error);
+		}
 	};
 
-	const agregarTarea = (e) => {
+	const obtenerTareas = async () => {
+		try {
+			const resp = await fetch(USER_URL);
+
+			if (!resp.ok) {
+				throw new Error(`No se pudo obtener el usuario: ${resp.status}`);
+			}
+
+			const datos = await resp.json();
+			setTasks(datos.todos || []);
+		} catch (error) {
+			console.log(error);
+			setTasks([]);
+		}
+	};
+
+	const inicializarUsuario = async () => {
+		try {
+			const resp = await fetch(USER_URL);
+
+			if (resp.status === 404) {
+				await crearUsuario();
+			}
+
+			await obtenerTareas();
+		} catch (error) {
+			console.log(error);
+			setTasks([]);
+		}
+	};
+
+	const agregarTarea = async (e) => {
 		e.preventDefault();
 
 		if (!task.trim()) return;
@@ -45,42 +69,46 @@ const Home = () => {
 			is_done: false,
 		};
 
-		fetch(API_URL, {
-			method: "POST",
-			body: JSON.stringify(nuevaTarea),
-			headers: {
-				"Content-Type": "application/json",
-			},
-		})
-			.then((resp) => resp.text())
-			.then((data) => {
-				console.log(data);
-				setTask("");
-				obtenerTareas();
-			})
-			.catch((error) => console.log(error));
+		try {
+			const resp = await fetch(API_URL, {
+				method: "POST",
+				body: JSON.stringify(nuevaTarea),
+				headers: {
+					"Content-Type": "application/json",
+				},
+			});
+			const data = await resp.text();
+			console.log(data);
+			setTask("");
+			await obtenerTareas();
+		} catch (error) {
+			console.log(error);
+		}
 	};
 
-	const eliminarTarea = (id) => {
-		fetch(`https://playground.4geeks.com/todo/todos/${id}`, {
-			method: "DELETE",
-		})
-			.then((resp) => {
-				console.log(resp.status);
-				obtenerTareas();
-			})
-			.catch((error) => console.log(error));
+	const eliminarTarea = async (id) => {
+		try {
+			const resp = await fetch(`https://playground.4geeks.com/todo/todos/${id}`, {
+				method: "DELETE",
+			});
+			console.log(resp.status);
+			await obtenerTareas();
+		} catch (error) {
+			console.log(error);
+		}
 	};
 
-	const limpiarTodo = () => {
-		fetch(USER_URL, {
-			method: "DELETE",
-		})
-			.then(() => {
-				setTasks([]);
-				crearUsuario();
-			})
-			.catch((error) => console.log(error));
+	const limpiarTodo = async () => {
+		try {
+			await fetch(USER_URL, {
+				method: "DELETE",
+			});
+			setTasks([]);
+			await crearUsuario();
+			await obtenerTareas();
+		} catch (error) {
+			console.log(error);
+		}
 	};
 
 	return (
